@@ -1,0 +1,25 @@
+services:
+  asterisk:
+    build:
+      context: ./infra/asterisk
+    container_name: waihu-asterisk
+    restart: unless-stopped
+    environment:
+      ASTERISK_SIP_PASSWORD: ${ASTERISK_SIP_PASSWORD:-sip-dev-only}
+      ASTERISK_ARI_USER: ${ASTERISK_ARI_USER:-outbound}
+      ASTERISK_ARI_PASSWORD: ${ASTERISK_ARI_PASSWORD:-outbound-dev-only}
+      ASTERISK_EXTERNAL_ADDRESS: ${ASTERISK_EXTERNAL_ADDRESS:-host.docker.internal}
+    ports:
+      - "5060:5060/udp"
+      - "8088:8088"
+      - "10000-10100:10000-10100/udp"
+    volumes:
+      - asterisk-recordings:/var/spool/asterisk/recording
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS -u \"$$ASTERISK_ARI_USER:$$ASTERISK_ARI_PASSWORD\" http://localhost:8088/ari/asterisk/info >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  asterisk-recordings:
