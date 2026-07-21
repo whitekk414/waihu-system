@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SIP 外呼链路测试</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div>
+        <p class="eyebrow">FREE SIP PROTOTYPE</p>
+        <h1>SIP 外呼链路测试</h1>
+        <p class="sub">固定话术播放、双向录音、转写与模型判断的本地验证台</p>
+      </div>
+      <div class="connection"><span id="connectionDot"></span><span id="connectionText">正在连接</span></div>
+    </header>
+
+    <section class="panel create-panel">
+      <div>
+        <h2>创建测试呼叫</h2>
+        <p>默认呼叫已注册的 SIP 分机，不会拨打真实电话号码。</p>
+      </div>
+      <form id="taskForm">
+        <label>测试分机<input id="extension" value="1001" pattern="[0-9]{2,20}" required></label>
+        <label>固定话术<select id="promptId"><option value="payment-reminder">还款提醒（测试）</option></select></label>
+        <button type="submit" id="createButton">开始测试</button>
+      </form>
+      <p id="formError" class="error" hidden></p>
+    </section>
+
+    <section class="grid">
+      <article class="panel task-panel">
+        <div class="panel-title"><h2>任务</h2><button class="ghost" id="refreshButton">刷新</button></div>
+        <div id="taskList" class="task-list"><p class="empty">还没有测试任务</p></div>
+      </article>
+      <article class="panel detail-panel">
+        <div class="panel-title"><h2>任务详情</h2><span id="statusBadge" class="badge">未选择</span></div>
+        <div id="emptyDetail" class="empty-detail">选择左侧任务查看实时进度</div>
+        <div id="taskDetail" hidden>
+          <dl class="facts">
+            <div><dt>分机</dt><dd id="detailExtension">—</dd></div>
+            <div><dt>话术</dt><dd id="detailPrompt">—</dd></div>
+            <div><dt>创建时间</dt><dd id="detailCreated">—</dd></div>
+          </dl>
+          <h3>状态时间线</h3>
+          <ol id="timeline" class="timeline"></ol>
+          <h3>转写文本</h3><pre id="transcript">等待录音处理</pre>
+          <h3>模型结果</h3><pre id="analysis">等待模型分析</pre>
+        </div>
+      </article>
+    </section>
+  </main>
+  <script src="/app.js" defer></script>
+</body>
+</html>
