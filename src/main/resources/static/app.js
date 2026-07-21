@@ -3,8 +3,10 @@ const $ = id => document.getElementById(id);
 
 async function api(path, options = {}) {
   const response = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
-  if (!response.ok) throw new Error(await response.text() || `HTTP ${response.status}`);
-  return response.status === 204 ? null : response.json();
+  const text = await response.text();
+  if (!response.ok) throw new Error(text || `HTTP ${response.status}`);
+  if (!text) return null;
+  return JSON.parse(text);
 }
 
 async function loadTasks() {

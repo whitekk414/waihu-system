@@ -22,4 +22,11 @@ class StaticPageTest {
             .andExpect(status().isOk())
             .andExpect(content().string(containsString("SIP 外呼链路测试")));
     }
+
+    @Test
+    void clientHandlesSuccessfulEmptyResponses() throws Exception {
+        mvc.perform(get("/app.js"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("if (!text) return null")));
+    }
 }
