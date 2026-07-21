@@ -1,4 +1,20 @@
 services:
+  app:
+    build:
+      context: .
+    container_name: waihu-app
+    restart: unless-stopped
+    environment:
+      OUTBOUND_TELEPHONY_MODE: ${OUTBOUND_TELEPHONY_MODE:-mock}
+      OUTBOUND_PROCESSING_MODE: ${OUTBOUND_PROCESSING_MODE:-mock}
+    ports:
+      - "8081:8080"
+    volumes:
+      - app-data:/app/data
+    depends_on:
+      asterisk:
+        condition: service_healthy
+
   asterisk:
     build:
       context: ./infra/asterisk
@@ -23,3 +39,4 @@ services:
 
 volumes:
   asterisk-recordings:
+  app-data:
