@@ -15,8 +15,8 @@ COPY entrypoint.sh /entrypoint.sh
 
 RUN sed -i 's/\r$//' /entrypoint.sh \
     && chmod +x /entrypoint.sh \
-    && mkdir -p /var/spool/asterisk/recording /var/lib/asterisk/sounds/custom \
-    && sox -n -r 8000 -c 1 -b 16 /var/lib/asterisk/sounds/custom/payment-reminder.wav synth 1 sine 880 vol 0.1
+    && mkdir -p /var/spool/asterisk/recording /usr/share/asterisk/sounds/custom \
+    && sox -n -r 8000 -c 1 -b 16 /usr/share/asterisk/sounds/custom/payment-reminder.wav synth 1 sine 880 vol 0.1
 
 EXPOSE 5060/udp 8088/tcp 10000-10100/udp
 ENTRYPOINT ["/entrypoint.sh"]

@@ -4,12 +4,14 @@ import com.company.outbound.task.CallStatus;
 import com.company.outbound.task.CallTaskService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.util.UUID;
 
 @Service
+@ConditionalOnProperty(name = "outbound.dialog.enabled", havingValue = "false", matchIfMissing = true)
 public class ProcessingOrchestrator {
     private final CallTaskService taskService;
     private final RecordingService recordingService;

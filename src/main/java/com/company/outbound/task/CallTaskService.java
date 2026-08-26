@@ -60,6 +60,14 @@ public class CallTaskService {
         find(id).saveProcessingResults(transcript, analysisJson);
     }
 
+    @Transactional
+    public void completeGuidedDialog(UUID id, String transcript, String analysisJson) {
+        CallTask task = find(id);
+        task.saveProcessingResults(transcript, analysisJson);
+        task.moveTo(CallStatus.COMPLETED);
+        eventService.publish(id, CallStatus.COMPLETED, "Guided dialog completed");
+    }
+
     private CallTask find(UUID id) {
         return repository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found"));

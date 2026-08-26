@@ -5,8 +5,11 @@ services:
     container_name: waihu-app
     restart: unless-stopped
     environment:
-      OUTBOUND_TELEPHONY_MODE: ${OUTBOUND_TELEPHONY_MODE:-mock}
+      OUTBOUND_TELEPHONY_MODE: ${OUTBOUND_TELEPHONY_MODE:-ari}
       OUTBOUND_PROCESSING_MODE: ${OUTBOUND_PROCESSING_MODE:-mock}
+      ASTERISK_ARI_BASE_URL: http://asterisk:8088
+      ASTERISK_ARI_USER: ${ASTERISK_ARI_USER:-outbound}
+      ASTERISK_ARI_PASSWORD: ${ASTERISK_ARI_PASSWORD:-outbound-dev-only}
     ports:
       - "8081:8080"
     volumes:
@@ -24,13 +27,13 @@ services:
       ASTERISK_SIP_PASSWORD: ${ASTERISK_SIP_PASSWORD:-sip-dev-only}
       ASTERISK_ARI_USER: ${ASTERISK_ARI_USER:-outbound}
       ASTERISK_ARI_PASSWORD: ${ASTERISK_ARI_PASSWORD:-outbound-dev-only}
-      ASTERISK_EXTERNAL_ADDRESS: ${ASTERISK_EXTERNAL_ADDRESS:-host.docker.internal}
+      ASTERISK_EXTERNAL_ADDRESS: ${ASTERISK_EXTERNAL_ADDRESS:-192.168.112.190}
     ports:
       - "5060:5060/udp"
       - "8088:8088"
       - "10000-10100:10000-10100/udp"
     volumes:
-      - asterisk-recordings:/var/spool/asterisk/recording
+      - ./recordings:/var/spool/asterisk/recording
     healthcheck:
       test: ["CMD-SHELL", "curl -fsS -u \"$$ASTERISK_ARI_USER:$$ASTERISK_ARI_PASSWORD\" http://localhost:8088/ari/asterisk/info >/dev/null"]
       interval: 5s
@@ -38,5 +41,4 @@ services:
       retries: 10
 
 volumes:
-  asterisk-recordings:
   app-data:

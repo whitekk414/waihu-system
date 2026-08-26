@@ -17,16 +17,18 @@ class StaticPageTest {
     @Autowired MockMvc mvc;
 
     @Test
-    void servesTestConsole() throws Exception {
+    void servesDialogConsole() throws Exception {
         mvc.perform(get("/index.html"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("SIP 外呼链路测试")));
+            .andExpect(content().string(containsString("SIM 自动对话测试")))
+            .andExpect(content().string(containsString("确认拨打")));
     }
 
     @Test
-    void clientHandlesSuccessfulEmptyResponses() throws Exception {
+    void clientSafelyHandlesEmptyAndNonJsonResponses() throws Exception {
         mvc.perform(get("/app.js"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("if (!text) return null")));
+            .andExpect(content().string(containsString("if (!text.trim() && response.ok) return null")))
+            .andExpect(content().string(containsString("content-type")));
     }
 }

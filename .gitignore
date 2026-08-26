@@ -6,4 +6,11 @@ data/
 .idea/
 .vscode/
 *.iml
+logs/
+recordings/
+tools/
+speech-service/.venv/
+speech-service/.models/
+speech-service/.pytest_cache/
+speech-service/**/__pycache__/
 

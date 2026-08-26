@@ -12,8 +12,10 @@ public final class CallStateMachine {
         allow(CallStatus.PENDING, CallStatus.VALIDATING);
         allow(CallStatus.VALIDATING, CallStatus.ORIGINATING);
         allow(CallStatus.ORIGINATING, CallStatus.RINGING);
+        allow(CallStatus.ORIGINATING, CallStatus.ANSWERED);
         allow(CallStatus.RINGING, CallStatus.ANSWERED);
         allow(CallStatus.ANSWERED, CallStatus.PLAYING_PROMPT);
+        allow(CallStatus.ANSWERED, CallStatus.TRANSCRIBING);
         allow(CallStatus.PLAYING_PROMPT, CallStatus.WAITING_RESPONSE);
         allow(CallStatus.WAITING_RESPONSE, CallStatus.CALL_ENDED);
         allow(CallStatus.CALL_ENDED, CallStatus.RECORDING_READY);

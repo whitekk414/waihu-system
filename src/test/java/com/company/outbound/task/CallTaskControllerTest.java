@@ -56,6 +56,6 @@ class CallTaskControllerTest {
             .andExpect(status().isAccepted());
 
         mvc.perform(get("/api/tasks/{id}", id))
-            .andExpect(jsonPath("$.status").value("RECORDING_READY"));
+            .andExpect(jsonPath("$.status").value("ANSWERED"));
     }
 }

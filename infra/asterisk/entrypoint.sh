@@ -8,7 +8,8 @@ set -eu
 export ASTERISK_SIP_PASSWORD ASTERISK_ARI_USER ASTERISK_ARI_PASSWORD ASTERISK_EXTERNAL_ADDRESS
 
 for file in asterisk.conf pjsip.conf extensions.conf http.conf ari.conf rtp.conf; do
-  envsubst < "/templates/$file" > "/etc/asterisk/$file"
+  envsubst '$ASTERISK_SIP_PASSWORD $ASTERISK_ARI_USER $ASTERISK_ARI_PASSWORD $ASTERISK_EXTERNAL_ADDRESS' \
+    < "/templates/$file" > "/etc/asterisk/$file"
 done
 
 exec asterisk -f -vvv
