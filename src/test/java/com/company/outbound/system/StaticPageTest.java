@@ -61,4 +61,16 @@ class StaticPageTest {
             .andExpect(content().string(containsString("/api/tasks/${id}/turns")))
             .andExpect(content().string(containsString("/api/events/tasks/${id}")));
     }
+
+    @Test
+    void clientRequiresConfirmationAndRecoversLiveUpdates() throws Exception {
+        mvc.perform(get("/app.js"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("openCallDialog")))
+            .andExpect(content().string(containsString("closeCallDialog")))
+            .andExpect(content().string(containsString("showToast")))
+            .andExpect(content().string(containsString("confirmed: true")))
+            .andExpect(content().string(containsString("/start-dialog")))
+            .andExpect(content().string(containsString("Math.min")));
+    }
 }

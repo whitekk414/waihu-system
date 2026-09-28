@@ -45,7 +45,7 @@ function renderTasks() {
   }
   tasks.forEach(task => {
     const button = document.createElement("button"); button.type = "button"; button.className = `task ${task.id === state.selectedId ? "selected" : ""}`;
-    const header = document.createElement("span"); header.className = "task-title"; const title = document.createElement("strong"); title.textContent = mask(task.extension);
+    const header = document.createElement("span"); header.className = "task-row"; const title = document.createElement("strong"); title.textContent = mask(task.extension);
     const badge = document.createElement("em"); badge.className = `status-badge ${statusTone(task.status)}`; badge.textContent = STATUS_LABELS[task.status] || task.status;
     const time = document.createElement("small"); time.textContent = formatTime(task.createdAt); header.append(title, badge); button.append(header, time); button.addEventListener("click", () => selectTask(task.id)); list.append(button);
   });
@@ -63,9 +63,9 @@ function renderConversation(turns) {
   const container = $("turns"); container.replaceChildren();
   if (!turns.length) { const empty = document.createElement("div"); empty.className = "empty compact"; const icon = document.createElement("span"); icon.textContent = "✦"; const text = document.createElement("p"); text.textContent = "对话接通后，转写和意图将显示在这里"; empty.append(icon, text); container.append(empty); return; }
   turns.forEach(turn => {
-    const card = document.createElement("article"); card.className = "turn"; const heading = document.createElement("div"); heading.className = "turn-heading";
-    const title = document.createElement("strong"); title.textContent = NODE_LABELS[turn.node] || turn.node; const attempt = document.createElement("span"); attempt.textContent = `第 ${Number(turn.attempt || 0) + 1} 次`;
-    const transcript = document.createElement("p"); transcript.textContent = turn.transcript || "等待语音识别结果…"; const insight = document.createElement("div"); insight.className = "turn-insight";
+    const card = document.createElement("article"); card.className = "turn"; const heading = document.createElement("div"); heading.className = "turn-head";
+    const title = document.createElement("strong"); title.className = "turn-node"; title.textContent = NODE_LABELS[turn.node] || turn.node; const attempt = document.createElement("span"); attempt.className = "intent-chip"; attempt.textContent = `第 ${Number(turn.attempt || 0) + 1} 次`;
+    const transcript = document.createElement("p"); transcript.textContent = turn.transcript || "等待语音识别结果…"; const insight = document.createElement("div"); insight.className = "turn-meta";
     const intent = document.createElement("span"); intent.textContent = `意图：${turn.intent || "待判断"}`; const confidence = document.createElement("span"); confidence.textContent = turn.confidence == null ? "置信度：—" : `置信度：${Math.round(turn.confidence * 100)}%`;
     heading.append(title, attempt); insight.append(intent, confidence); card.append(heading, transcript, insight); container.append(card);
   });
@@ -75,9 +75,9 @@ function renderTimeline(events) {
   const timeline = $("dialogTimeline"); timeline.replaceChildren();
   if (!events.length) { const empty = document.createElement("li"); empty.className = "empty-timeline"; const icon = document.createElement("span"); icon.textContent = "○"; const text = document.createElement("p"); text.textContent = "暂无任务事件"; empty.append(icon, text); timeline.append(empty); return; }
   events.forEach(event => {
-    const item = document.createElement("li"); item.className = `timeline-item ${statusTone(event.status)}`; const dot = document.createElement("i"); const body = document.createElement("div");
-    const status = document.createElement("strong"); status.textContent = STATUS_LABELS[event.status] || event.status; const message = document.createElement("p"); message.textContent = event.message || "状态已更新"; const time = document.createElement("time"); time.textContent = formatTime(event.occurredAt);
-    body.append(status, message, time); item.append(dot, body); timeline.append(item);
+    const item = document.createElement("li"); item.className = `timeline-event ${statusTone(event.status)}`; const dot = document.createElement("span"); dot.className = "event-dot";
+    const status = document.createElement("strong"); status.textContent = STATUS_LABELS[event.status] || event.status; const details = document.createElement("small"); details.textContent = `${event.message || "状态已更新"} · ${formatTime(event.occurredAt)}`;
+    item.append(dot, status, details); timeline.append(item);
   });
 }
 
@@ -92,11 +92,33 @@ async function loadTasks() {
   renderMetrics(); renderTasks(); if (state.selectedId) await renderDetail(state.selectedId); else { renderCallStage(null, []); renderConversation([]); renderTimeline([]); }
 }
 
-function showError(error) { const target = $("formError"); if (target) { target.hidden = false; target.textContent = error.message || "请求失败"; } console.error(error); }
+function showToast(message, tone = "success") {
+  const toast = document.createElement("div"); toast.className = `toast ${tone}`; toast.setAttribute("role", tone === "danger" ? "alert" : "status"); toast.textContent = message;
+  $("toastRegion").append(toast); setTimeout(() => toast.remove(), 4200);
+}
+
+function openCallDialog() {
+  $("formError").hidden = true; $("callDialog").showModal(); setTimeout(() => $("extension").focus(), 0);
+}
+
+function closeCallDialog() {
+  $("callDialog").close(); $("taskForm").reset(); $("formError").hidden = true;
+}
+
+function showError(error) {
+  const message = error?.message || "请求失败"; const target = $("formError");
+  if (target && $("callDialog").open) { target.hidden = false; target.textContent = message; }
+  showToast(message, "error"); console.error(error);
+}
 
 $("taskForm").addEventListener("submit", async event => {
   event.preventDefault(); const button = $("createButton"); button.disabled = true; $("formError").hidden = true;
-  try { const number = $("extension").value.trim(); if (!$("confirmed").checked) throw new Error("请先勾选确认拨打"); const task = await api("/api/tasks", { method: "POST", body: JSON.stringify({ extension: number, promptId: "identity-question" }) }); state.selectedId = task.id; await api(`/api/tasks/${task.id}/start-dialog`, { method: "POST", body: JSON.stringify({ confirmed: true }) }); await loadTasks(); }
+  try {
+    const number = $("extension").value.trim(); if (!/^1\d{10}$/.test(number)) throw new Error("请输入有效的 11 位手机号");
+    if (!$("confirmed").checked) throw new Error("请先勾选确认拨打");
+    const task = await api("/api/tasks", { method: "POST", body: JSON.stringify({ extension: number, promptId: "identity-question" }) }); state.selectedId = task.id;
+    await api(`/api/tasks/${task.id}/start-dialog`, { method: "POST", body: JSON.stringify({ confirmed: true }) }); closeCallDialog(); showToast(`已创建 ${mask(number)} 的外呼任务`); await loadTasks();
+  }
   catch (error) { showError(error); } finally { button.disabled = false; }
 });
 
@@ -108,6 +130,11 @@ function connectEvents() {
 }
 
 $("refreshButton").addEventListener("click", () => loadTasks().catch(showError));
+$("openCallDialog").addEventListener("click", openCallDialog);
+$("closeCallDialog").addEventListener("click", closeCallDialog);
+$("cancelCallDialog").addEventListener("click", closeCallDialog);
+$("callDialog").addEventListener("click", event => { if (event.target === $("callDialog")) closeCallDialog(); });
+$("callDialog").addEventListener("cancel", event => { event.preventDefault(); closeCallDialog(); });
 $("taskSearch").addEventListener("input", event => { state.query = event.target.value.trim(); renderTasks(); });
 $("statusFilter").addEventListener("change", event => { state.statusFilter = event.target.value; renderTasks(); });
 setInterval(() => { $("liveClock").textContent = new Date().toLocaleTimeString("zh-CN", { hour12: false }); }, 1000);
