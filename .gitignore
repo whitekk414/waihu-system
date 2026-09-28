@@ -13,4 +13,5 @@ speech-service/.venv/
 speech-service/.models/
 speech-service/.pytest_cache/
 speech-service/**/__pycache__/
+.superpowers/
 

@@ -1,55 +1,67 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SIM 自动对话测试</title>
-  <link rel="stylesheet" href="/styles.css">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#080b10">
+  <title>CallFlow Studio · SIM AI 外呼工作台</title><link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-  <main class="shell">
-    <header>
-      <div>
-        <p class="eyebrow">WAIHU DIALOG POC</p>
-        <h1>SIM 自动对话测试</h1>
-        <p class="sub">手机外呼、预制话术、分段录音、语音识别与模型判断</p>
-      </div>
-      <div class="connection"><span id="connectionDot"></span><span id="connectionText">正在连接</span></div>
+  <div class="operations-shell">
+    <header class="topbar">
+      <a class="brand" href="#overview" aria-label="CallFlow Studio 首页"><span class="brand-mark" aria-hidden="true">CF</span><span><strong>CallFlow Studio</strong><small>SIM AI OUTBOUND</small></span></a>
+      <div class="topbar-center"><span class="mode-chip">POC / LOCAL-FIRST</span><span class="clock" id="liveClock">--:--:--</span></div>
+      <div class="connection" id="connectionStatus" role="status"><span id="connectionDot" aria-hidden="true"></span><span id="connectionText">正在连接</span></div>
     </header>
-
-    <section class="panel create-panel">
-      <div>
-        <h2>创建单号码测试</h2>
-        <p>只允许一个中国大陆手机号；拨打前必须人工确认。</p>
-      </div>
-      <form id="taskForm">
-        <label>测试手机号<input id="extension" placeholder="1XXXXXXXXXX" pattern="1[0-9]{10}" required></label>
-        <label class="confirm"><input id="confirmed" type="checkbox" required> 我已获得授权，确认拨打该号码</label>
-        <button type="submit" id="createButton">确认拨打</button>
-      </form>
-      <p id="formError" class="error" hidden></p>
-    </section>
-
-    <section class="grid">
-      <article class="panel task-panel">
-        <div class="panel-title"><h2>测试任务</h2><button class="ghost" id="refreshButton">刷新</button></div>
-        <div id="taskList" class="task-list"><p class="empty">还没有测试任务</p></div>
-      </article>
-      <article class="panel detail-panel">
-        <div class="panel-title"><h2>任务详情</h2><span id="statusBadge" class="badge">未选择</span></div>
-        <div id="emptyDetail" class="empty-detail">选择左侧任务查看进度</div>
-        <div id="taskDetail" hidden>
-          <dl class="facts">
-            <div><dt>号码</dt><dd id="detailExtension">—</dd></div>
-            <div><dt>当前状态</dt><dd id="detailStatus">—</dd></div>
-            <div><dt>创建时间</dt><dd id="detailCreated">—</dd></div>
-          </dl>
-          <h3>状态时间线</h3><ol id="timeline" class="timeline"></ol>
-          <h3>对话轮次</h3><div id="turns" class="turns"><p class="empty">等待回答</p></div>
-        </div>
-      </article>
-    </section>
-  </main>
+    <aside class="rail" aria-label="主导航">
+      <nav><a class="rail-item active" href="#overview" aria-current="page"><span aria-hidden="true">◈</span><small>总览</small></a><a class="rail-item" href="#tasks"><span aria-hidden="true">◎</span><small>任务</small></a><a class="rail-item" href="#conversation"><span aria-hidden="true">≡</span><small>对话</small></a><a class="rail-item" href="#system"><span aria-hidden="true">△</span><small>系统</small></a></nav>
+      <button class="rail-item rail-help" type="button" title="查看部署与验收文档"><span aria-hidden="true">?</span><small>帮助</small></button>
+    </aside>
+    <aside class="task-browser panel" id="tasks" aria-label="外呼任务">
+      <div class="section-heading"><div><p class="eyebrow">CALL QUEUE</p><h1>外呼任务</h1></div><button class="icon-button" id="refreshButton" type="button" aria-label="刷新任务" title="刷新任务">↻</button></div>
+      <div class="task-tools"><label class="search-field"><span aria-hidden="true">⌕</span><input id="taskSearch" type="search" placeholder="搜索号码或状态" aria-label="搜索任务"></label><label class="sr-only" for="statusFilter">按状态筛选</label><select id="statusFilter"><option value="ALL">全部状态</option><option value="ACTIVE">进行中</option><option value="COMPLETED">已完成</option><option value="FAILED">已失败</option></select></div>
+      <div id="taskList" class="task-list" aria-live="polite"><div class="empty compact"><span>◌</span><p>暂无外呼任务</p></div></div>
+      <button class="primary-action" id="openCallDialog" type="button"><span aria-hidden="true">＋</span>创建外呼</button>
+    </aside>
+    <main class="workspace" id="overview">
+      <section class="metric-grid" id="metricGrid" aria-label="今日指标">
+        <article class="metric-card"><span class="metric-icon mint">◎</span><div><small>今日任务</small><strong id="metricTotal">0</strong></div><em id="metricTotalMeta">等待数据</em></article>
+        <article class="metric-card"><span class="metric-icon blue">✓</span><div><small>已完成</small><strong id="metricCompleted">0</strong></div><em id="metricCompletedMeta">0% 完成率</em></article>
+        <article class="metric-card"><span class="metric-icon amber">!</span><div><small>需人工</small><strong id="metricManual">0</strong></div><em id="metricManualMeta">待处理</em></article>
+        <article class="metric-card"><span class="metric-icon red">×</span><div><small>已失败</small><strong id="metricFailed">0</strong></div><em id="metricFailedMeta">需要检查</em></article>
+      </section>
+      <section class="workspace-grid">
+        <article class="call-stage panel" id="callStage">
+          <div class="panel-toolbar"><div><p class="eyebrow">LIVE SESSION</p><h2>实时通话</h2></div><span class="status-badge neutral" id="statusBadge">未选择</span></div>
+          <div class="empty-stage" id="emptyDetail"><div class="radar" aria-hidden="true"><i></i><span>◎</span></div><h3>选择一个任务</h3><p>查看实时通话、对话识别和处理进度</p></div>
+          <div class="call-detail" id="taskDetail" hidden>
+            <div class="call-identity"><div class="avatar" aria-hidden="true">◎</div><div><small>当前客户</small><strong id="detailExtension">—</strong><span id="detailCreated">—</span></div><div class="call-duration"><small>任务状态</small><strong id="detailStatus">—</strong></div></div>
+            <div class="call-wave" id="callWave" aria-label="通话音频波形"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <div class="stage-progress"><span id="currentNode">正在等待对话事件</span><span id="turnCount">0 轮对话</span></div>
+            <div class="stage-actions"><button class="secondary-action" type="button" disabled title="后端尚未开放安全的人工接管 API">人工接管</button><button class="danger-action" type="button" disabled title="后端尚未开放安全的手动挂断 API">挂断通话</button></div>
+          </div>
+        </article>
+        <aside class="conversation-panel panel" id="conversationPanel">
+          <div class="panel-toolbar"><div><p class="eyebrow">AI COPILOT</p><h2>AI 会话助手</h2></div><span class="model-chip">SenseVoice · Rules</span></div>
+          <div class="conversation-feed" id="turns" aria-live="polite"><div class="empty compact"><span>✦</span><p>对话接通后，转写和意图将显示在这里</p></div></div>
+          <div class="copilot-footer"><span><i></i>本地识别</span><span>话术可审计</span></div>
+        </aside>
+      </section>
+      <section class="dialog-timeline panel" id="conversation">
+        <div class="panel-toolbar"><div><p class="eyebrow">DIALOG TIMELINE</p><h2>对话时间线</h2></div><span class="timeline-legend"><i></i>真实 ARI 事件</span></div>
+        <ol id="dialogTimeline" class="timeline-track"><li class="empty-timeline"><span>○</span><p>暂无任务事件</p></li></ol>
+      </section>
+    </main>
+  </div>
+  <dialog class="call-dialog" id="callDialog" aria-labelledby="callDialogTitle">
+    <form id="taskForm" method="dialog">
+      <div class="dialog-heading"><div><p class="eyebrow">NEW OUTBOUND CALL</p><h2 id="callDialogTitle">创建单号码外呼</h2></div><button class="icon-button" id="closeCallDialog" type="button" aria-label="关闭">×</button></div>
+      <p class="dialog-note">只允许拨打一个已获授权的中国大陆手机号，提交后将立即调用真实 SIM 链路。</p>
+      <label class="field"><span>测试手机号</span><input id="extension" inputmode="numeric" autocomplete="off" placeholder="1XXXXXXXXXX" pattern="1[0-9]{10}" maxlength="11" required></label>
+      <label class="confirm"><input id="confirmed" type="checkbox" required><span>我已获得授权，确认拨打该号码</span></label>
+      <p id="formError" class="form-error" role="alert" hidden></p>
+      <div class="dialog-actions"><button class="secondary-action" id="cancelCallDialog" type="button">取消</button><button class="primary-action" type="submit" id="createButton">确认并拨打</button></div>
+    </form>
+  </dialog>
+  <div class="toast-region" id="toastRegion" aria-live="polite" aria-atomic="true"></div>
   <script src="/app.js" defer></script>
 </body>
 </html>

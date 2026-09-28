@@ -17,11 +17,16 @@ class StaticPageTest {
     @Autowired MockMvc mvc;
 
     @Test
-    void servesDialogConsole() throws Exception {
+    void servesOperationsWorkbench() throws Exception {
         mvc.perform(get("/index.html"))
             .andExpect(status().isOk())
-            .andExpect(content().string(containsString("SIM 自动对话测试")))
-            .andExpect(content().string(containsString("确认拨打")));
+            .andExpect(content().string(containsString("CallFlow Studio")))
+            .andExpect(content().string(containsString("operations-shell")))
+            .andExpect(content().string(containsString("metricGrid")))
+            .andExpect(content().string(containsString("callStage")))
+            .andExpect(content().string(containsString("conversationPanel")))
+            .andExpect(content().string(containsString("dialogTimeline")))
+            .andExpect(content().string(containsString("我已获得授权，确认拨打该号码")));
     }
 
     @Test
