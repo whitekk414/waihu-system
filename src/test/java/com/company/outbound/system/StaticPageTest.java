@@ -36,4 +36,15 @@ class StaticPageTest {
             .andExpect(content().string(containsString("if (!text.trim() && response.ok) return null")))
             .andExpect(content().string(containsString("content-type")));
     }
+
+    @Test
+    void servesWorkbenchDesignSystem() throws Exception {
+        mvc.perform(get("/styles.css"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("--accent-mint")))
+            .andExpect(content().string(containsString(".workspace-grid")))
+            .andExpect(content().string(containsString(".call-wave")))
+            .andExpect(content().string(containsString("@keyframes")))
+            .andExpect(content().string(containsString("prefers-reduced-motion")));
+    }
 }
