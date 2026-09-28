@@ -4,6 +4,18 @@
 
 > 当前定位是技术验证版（PoC），不应未经合规评审直接用于生产批量外呼。
 
+![CallFlow Studio 外呼工作台](docs/screenshots/outbound-workbench.png)
+
+## CallFlow Studio 工作台
+
+新版页面采用面向运营人员的深色外呼工作台布局，并直接读取现有任务、ARI 事件与对话轮次接口：
+
+- 左侧任务队列支持号码/状态搜索、状态筛选和手机号脱敏。
+- 顶部指标展示任务量、完成率、人工跟进和失败数，不使用前端演示数据。
+- 实时通话区同步当前状态、对话节点和轮次；AI 助手展示 SenseVoice 转写、规则意图与置信度。
+- 对话时间线展示真实状态事件；SSE 中断后采用有上限的退避重连。
+- 创建外呼必须输入有效手机号并明确确认授权；人工接管和挂断在后端提供安全 API 前保持禁用。
+
 ## 已完成能力
 
 - 使用手机 SIM 卡自动拨打真实号码。
@@ -72,6 +84,8 @@ mvn spring-boot:run
 - [测试与验收手册](docs/TESTING.md)
 - [SenseVoice 服务说明](speech-service/README.md)
 - [对话 MVP 设计](docs/superpowers/specs/2026-08-04-ari-guided-dialog-mvp-design.md)
+- [外呼工作台设计](docs/superpowers/specs/2026-09-28-outbound-workbench-ui-design.md)
+- [外呼工作台实施计划](docs/superpowers/plans/2026-09-28-outbound-workbench-ui.md)
 
 ## 安全与合规边界
 

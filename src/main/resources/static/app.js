@@ -55,7 +55,7 @@ function renderCallStage(task, turns) {
   $("emptyDetail").hidden = Boolean(task); $("taskDetail").hidden = !task; if (!task) return;
   $("statusBadge").className = `status-badge ${statusTone(task.status)}`; $("statusBadge").textContent = STATUS_LABELS[task.status] || task.status;
   $("detailExtension").textContent = mask(task.extension); $("detailStatus").textContent = STATUS_LABELS[task.status] || task.status; $("detailCreated").textContent = formatTime(task.createdAt);
-  $("callWave").classList.toggle("is-active", ACTIVE_STATUSES.has(task.status)); const latest = turns.at(-1);
+  $("callWave").classList.toggle("active", ACTIVE_STATUSES.has(task.status)); const latest = turns.at(-1);
   $("currentNode").textContent = latest ? (NODE_LABELS[latest.node] || latest.node) : "正在等待对话事件"; $("turnCount").textContent = `${turns.length} 轮对话`;
 }
 

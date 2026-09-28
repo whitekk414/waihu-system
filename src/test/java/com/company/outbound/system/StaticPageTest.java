@@ -44,6 +44,7 @@ class StaticPageTest {
             .andExpect(content().string(containsString("--accent-mint")))
             .andExpect(content().string(containsString(".workspace-grid")))
             .andExpect(content().string(containsString(".call-wave")))
+            .andExpect(content().string(containsString("[hidden]{display:none!important}")))
             .andExpect(content().string(containsString("@keyframes")))
             .andExpect(content().string(containsString("prefers-reduced-motion")));
     }
