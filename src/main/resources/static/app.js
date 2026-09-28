@@ -1,5 +1,8 @@
-const state = { tasks: [], selectedId: null, reconnectDelay: 1000 };
+const state = { tasks: [], selectedId: null, reconnectDelay: 1000, query: "", statusFilter: "ALL", detail: { task: null, events: [], turns: [] } };
 const $ = id => document.getElementById(id);
+const ACTIVE_STATUSES = new Set(["VALIDATING", "ORIGINATING", "RINGING", "ANSWERED", "PLAYING_PROMPT", "WAITING_RESPONSE", "CALL_ENDED", "RECORDING_READY", "TRANSCRIBING", "ANALYZING"]);
+const STATUS_LABELS = { PENDING: "等待开始", VALIDATING: "校验号码", ORIGINATING: "正在拨号", RINGING: "等待接听", ANSWERED: "已接通", PLAYING_PROMPT: "播放话术", WAITING_RESPONSE: "等待回答", CALL_ENDED: "通话结束", RECORDING_READY: "录音就绪", TRANSCRIBING: "语音识别", ANALYZING: "意图判断", COMPLETED: "已完成", FAILED: "失败" };
+const NODE_LABELS = { ASK_IDENTITY: "确认客户身份", ASK_HOME_VISIT: "确认家访意愿", EXPLAIN_AGENCY: "说明家访机构", EXPLAIN_CONTACT_TIME: "说明联系时间", EXPLAIN_COOPERATION: "说明配合事项", CLOSING: "结束说明" };
 
 async function api(path, options = {}) {
   const response = await fetch(path, { headers: { "Content-Type": "application/json" }, ...options });
@@ -8,70 +11,104 @@ async function api(path, options = {}) {
   let body = null;
   if (!text.trim() && response.ok) return null;
   if (!text.trim()) throw new Error(`HTTP ${response.status}`);
-  if (contentType.includes("application/json")) {
-    try { body = JSON.parse(text); } catch (_) { body = null; }
-  }
-  if (!response.ok) {
-    const message = body?.message || body?.detail || text || `HTTP ${response.status}`;
-    throw new Error(message);
-  }
+  if (contentType.includes("application/json")) { try { body = JSON.parse(text); } catch (_) { body = null; } }
+  if (!response.ok) throw new Error(body?.message || body?.detail || text || `HTTP ${response.status}`);
   return body ?? text;
 }
 
-async function loadTasks() {
-  state.tasks = await api("/api/tasks");
-  if (!state.selectedId && state.tasks[0]) state.selectedId = state.tasks[0].id;
-  renderTasks();
-  if (state.selectedId) await renderDetail(state.selectedId);
+function mask(number = "") { const value = String(number); return /^1\d{10}$/.test(value) ? `${value.slice(0, 3)}****${value.slice(-4)}` : value; }
+function formatTime(value) { if (!value) return "—"; const date = new Date(value); return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("zh-CN", { hour12: false }); }
+function statusTone(status) { if (status === "COMPLETED") return "success"; if (status === "FAILED") return "danger"; return ACTIVE_STATUSES.has(status) ? "active" : "neutral"; }
+function needsManual(task) { if (!task?.analysisJson) return false; try { return JSON.parse(task.analysisJson)?.needManualFollowUp === true; } catch (_) { return false; } }
+function deriveMetrics(tasks) { const total = tasks.length; const completed = tasks.filter(task => task.status === "COMPLETED").length; const failed = tasks.filter(task => task.status === "FAILED").length; const manual = tasks.filter(needsManual).length; return { total, completed, failed, manual, rate: total ? Math.round(completed * 100 / total) : 0 }; }
+
+function renderMetrics() {
+  const metrics = deriveMetrics(state.tasks);
+  $("metricTotal").textContent = metrics.total; $("metricCompleted").textContent = metrics.completed; $("metricManual").textContent = metrics.manual; $("metricFailed").textContent = metrics.failed;
+  $("metricTotalMeta").textContent = metrics.total ? `${state.tasks.filter(task => ACTIVE_STATUSES.has(task.status)).length} 个进行中` : "等待数据";
+  $("metricCompletedMeta").textContent = `${metrics.rate}% 完成率`; $("metricManualMeta").textContent = metrics.manual ? "建议人工跟进" : "暂无待处理"; $("metricFailedMeta").textContent = metrics.failed ? "需要检查" : "链路正常";
+}
+
+function filteredTasks() {
+  const query = state.query.toLowerCase();
+  return state.tasks.filter(task => {
+    const matchesQuery = !query || String(task.extension).includes(query) || (STATUS_LABELS[task.status] || task.status).toLowerCase().includes(query);
+    const matchesStatus = state.statusFilter === "ALL" || (state.statusFilter === "ACTIVE" ? ACTIVE_STATUSES.has(task.status) : task.status === state.statusFilter);
+    return matchesQuery && matchesStatus;
+  });
 }
 
 function renderTasks() {
-  const list = $("taskList"); list.replaceChildren();
-  if (!state.tasks.length) { const p=document.createElement("p"); p.className="empty"; p.textContent="还没有测试任务"; list.append(p); return; }
-  state.tasks.forEach(task => {
-    const button=document.createElement("button"); button.className=`task${task.id===state.selectedId?" selected":""}`;
-    const title=document.createElement("strong"); title.textContent=`${mask(task.extension)} · ${task.status}`;
-    const time=document.createElement("small"); time.textContent=new Date(task.createdAt).toLocaleString();
-    button.append(title,time); button.onclick=()=>{state.selectedId=task.id; renderTasks(); renderDetail(task.id);}; list.append(button);
+  const list = $("taskList"); list.replaceChildren(); const tasks = filteredTasks();
+  if (!tasks.length) {
+    const empty = document.createElement("div"); empty.className = "empty compact"; const icon = document.createElement("span"); icon.textContent = "◌"; const text = document.createElement("p"); text.textContent = state.tasks.length ? "没有匹配的任务" : "暂无外呼任务"; empty.append(icon, text); list.append(empty); return;
+  }
+  tasks.forEach(task => {
+    const button = document.createElement("button"); button.type = "button"; button.className = `task ${task.id === state.selectedId ? "selected" : ""}`;
+    const header = document.createElement("span"); header.className = "task-title"; const title = document.createElement("strong"); title.textContent = mask(task.extension);
+    const badge = document.createElement("em"); badge.className = `status-badge ${statusTone(task.status)}`; badge.textContent = STATUS_LABELS[task.status] || task.status;
+    const time = document.createElement("small"); time.textContent = formatTime(task.createdAt); header.append(title, badge); button.append(header, time); button.addEventListener("click", () => selectTask(task.id)); list.append(button);
+  });
+}
+
+function renderCallStage(task, turns) {
+  $("emptyDetail").hidden = Boolean(task); $("taskDetail").hidden = !task; if (!task) return;
+  $("statusBadge").className = `status-badge ${statusTone(task.status)}`; $("statusBadge").textContent = STATUS_LABELS[task.status] || task.status;
+  $("detailExtension").textContent = mask(task.extension); $("detailStatus").textContent = STATUS_LABELS[task.status] || task.status; $("detailCreated").textContent = formatTime(task.createdAt);
+  $("callWave").classList.toggle("is-active", ACTIVE_STATUSES.has(task.status)); const latest = turns.at(-1);
+  $("currentNode").textContent = latest ? (NODE_LABELS[latest.node] || latest.node) : "正在等待对话事件"; $("turnCount").textContent = `${turns.length} 轮对话`;
+}
+
+function renderConversation(turns) {
+  const container = $("turns"); container.replaceChildren();
+  if (!turns.length) { const empty = document.createElement("div"); empty.className = "empty compact"; const icon = document.createElement("span"); icon.textContent = "✦"; const text = document.createElement("p"); text.textContent = "对话接通后，转写和意图将显示在这里"; empty.append(icon, text); container.append(empty); return; }
+  turns.forEach(turn => {
+    const card = document.createElement("article"); card.className = "turn"; const heading = document.createElement("div"); heading.className = "turn-heading";
+    const title = document.createElement("strong"); title.textContent = NODE_LABELS[turn.node] || turn.node; const attempt = document.createElement("span"); attempt.textContent = `第 ${Number(turn.attempt || 0) + 1} 次`;
+    const transcript = document.createElement("p"); transcript.textContent = turn.transcript || "等待语音识别结果…"; const insight = document.createElement("div"); insight.className = "turn-insight";
+    const intent = document.createElement("span"); intent.textContent = `意图：${turn.intent || "待判断"}`; const confidence = document.createElement("span"); confidence.textContent = turn.confidence == null ? "置信度：—" : `置信度：${Math.round(turn.confidence * 100)}%`;
+    heading.append(title, attempt); insight.append(intent, confidence); card.append(heading, transcript, insight); container.append(card);
+  });
+}
+
+function renderTimeline(events) {
+  const timeline = $("dialogTimeline"); timeline.replaceChildren();
+  if (!events.length) { const empty = document.createElement("li"); empty.className = "empty-timeline"; const icon = document.createElement("span"); icon.textContent = "○"; const text = document.createElement("p"); text.textContent = "暂无任务事件"; empty.append(icon, text); timeline.append(empty); return; }
+  events.forEach(event => {
+    const item = document.createElement("li"); item.className = `timeline-item ${statusTone(event.status)}`; const dot = document.createElement("i"); const body = document.createElement("div");
+    const status = document.createElement("strong"); status.textContent = STATUS_LABELS[event.status] || event.status; const message = document.createElement("p"); message.textContent = event.message || "状态已更新"; const time = document.createElement("time"); time.textContent = formatTime(event.occurredAt);
+    body.append(status, message, time); item.append(dot, body); timeline.append(item);
   });
 }
 
 async function renderDetail(id) {
-  const [task, events, turns] = await Promise.all([
-    api(`/api/tasks/${id}`), api(`/api/events/tasks/${id}`), api(`/api/tasks/${id}/turns`)
-  ]);
-  $("emptyDetail").hidden=true; $("taskDetail").hidden=false; $("statusBadge").textContent=task.status;
-  $("detailExtension").textContent=mask(task.extension); $("detailStatus").textContent=task.status;
-  $("detailCreated").textContent=new Date(task.createdAt).toLocaleString();
-  const timeline=$("timeline"); timeline.replaceChildren();
-  events.forEach(event=>{const li=document.createElement("li"); li.textContent=`${event.status} · ${event.message}`; timeline.append(li);});
-  const container=$("turns"); container.replaceChildren();
-  if (!turns.length) { const p=document.createElement("p"); p.className="empty"; p.textContent="等待回答"; container.append(p); }
-  turns.forEach(turn=>{const card=document.createElement("article"); card.className="turn";
-    card.textContent=`${turn.node} / 第 ${turn.attempt+1} 次\n转写：${turn.transcript||"等待识别"}\n意图：${turn.intent||"等待判断"} ${turn.confidence??""}`; container.append(card);});
+  const [task, events, turns] = await Promise.all([api(`/api/tasks/${id}`), api(`/api/events/tasks/${id}`), api(`/api/tasks/${id}/turns`)]);
+  if (state.selectedId !== id) return; state.detail = { task, events, turns }; renderCallStage(task, turns); renderConversation(turns); renderTimeline(events);
+}
+async function selectTask(id) { state.selectedId = id; renderTasks(); try { await renderDetail(id); } catch (error) { showError(error); } }
+async function loadTasks() {
+  const tasks = await api("/api/tasks"); state.tasks = Array.isArray(tasks) ? tasks : [];
+  if (state.selectedId && !state.tasks.some(task => task.id === state.selectedId)) state.selectedId = null; if (!state.selectedId && state.tasks[0]) state.selectedId = state.tasks[0].id;
+  renderMetrics(); renderTasks(); if (state.selectedId) await renderDetail(state.selectedId); else { renderCallStage(null, []); renderConversation([]); renderTimeline([]); }
 }
 
-function mask(number){ return /^1\d{10}$/.test(number) ? `${number.slice(0,3)}****${number.slice(-4)}` : number; }
-function showError(error){$("formError").hidden=false; $("formError").textContent=error.message;}
+function showError(error) { const target = $("formError"); if (target) { target.hidden = false; target.textContent = error.message || "请求失败"; } console.error(error); }
 
-$("taskForm").addEventListener("submit",async event=>{
-  event.preventDefault(); const button=$("createButton"); button.disabled=true; $("formError").hidden=true;
-  try {
-    const number=$("extension").value.trim();
-    if (!$("confirmed").checked) throw new Error("请先勾选确认拨打");
-    const task=await api("/api/tasks",{method:"POST",body:JSON.stringify({extension:number,promptId:"identity-question"})});
-    state.selectedId=task.id;
-    await api(`/api/tasks/${task.id}/start-dialog`,{method:"POST",body:JSON.stringify({confirmed:true})});
-    await loadTasks();
-  } catch(error){showError(error);} finally{button.disabled=false;}
+$("taskForm").addEventListener("submit", async event => {
+  event.preventDefault(); const button = $("createButton"); button.disabled = true; $("formError").hidden = true;
+  try { const number = $("extension").value.trim(); if (!$("confirmed").checked) throw new Error("请先勾选确认拨打"); const task = await api("/api/tasks", { method: "POST", body: JSON.stringify({ extension: number, promptId: "identity-question" }) }); state.selectedId = task.id; await api(`/api/tasks/${task.id}/start-dialog`, { method: "POST", body: JSON.stringify({ confirmed: true }) }); await loadTasks(); }
+  catch (error) { showError(error); } finally { button.disabled = false; }
 });
 
 function connectEvents() {
-  const stream=new EventSource("/api/events/stream");
-  stream.onopen=()=>{$("connectionDot").parentElement.classList.add("online"); $("connectionText").textContent="实时连接"; state.reconnectDelay=1000;};
-  stream.addEventListener("task-event",()=>loadTasks().catch(showError));
-  stream.onerror=()=>{stream.close(); $("connectionDot").parentElement.classList.remove("online"); $("connectionText").textContent="连接中断"; setTimeout(connectEvents,state.reconnectDelay); state.reconnectDelay=Math.min(state.reconnectDelay*2,15000);};
+  const stream = new EventSource("/api/events/stream");
+  stream.onopen = () => { $("connectionStatus").classList.add("online"); $("connectionText").textContent = "实时连接"; state.reconnectDelay = 1000; };
+  stream.addEventListener("task-event", () => loadTasks().catch(showError));
+  stream.onerror = () => { stream.close(); $("connectionStatus").classList.remove("online"); $("connectionText").textContent = "连接中断"; setTimeout(connectEvents, state.reconnectDelay); state.reconnectDelay = Math.min(state.reconnectDelay * 2, 15000); };
 }
 
-$("refreshButton").onclick=()=>loadTasks().catch(showError);
+$("refreshButton").addEventListener("click", () => loadTasks().catch(showError));
+$("taskSearch").addEventListener("input", event => { state.query = event.target.value.trim(); renderTasks(); });
+$("statusFilter").addEventListener("change", event => { state.statusFilter = event.target.value; renderTasks(); });
+setInterval(() => { $("liveClock").textContent = new Date().toLocaleTimeString("zh-CN", { hour12: false }); }, 1000);
 loadTasks().catch(showError); connectEvents();

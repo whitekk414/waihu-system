@@ -47,4 +47,18 @@ class StaticPageTest {
             .andExpect(content().string(containsString("@keyframes")))
             .andExpect(content().string(containsString("prefers-reduced-motion")));
     }
+
+    @Test
+    void clientRendersWorkbenchFromRealApis() throws Exception {
+        mvc.perform(get("/app.js"))
+            .andExpect(status().isOk())
+            .andExpect(content().string(containsString("deriveMetrics")))
+            .andExpect(content().string(containsString("statusTone")))
+            .andExpect(content().string(containsString("renderMetrics")))
+            .andExpect(content().string(containsString("renderCallStage")))
+            .andExpect(content().string(containsString("renderConversation")))
+            .andExpect(content().string(containsString("renderTimeline")))
+            .andExpect(content().string(containsString("/api/tasks/${id}/turns")))
+            .andExpect(content().string(containsString("/api/events/tasks/${id}")));
+    }
 }
