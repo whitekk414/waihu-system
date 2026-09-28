@@ -9,7 +9,13 @@ python -m venv speech-service/.venv
 speech-service/.venv/Scripts/python -m pip install -r speech-service/requirements.txt
 ```
 
-首次启动会从 ModelScope 下载 SenseVoiceSmall 和 FSMN-VAD 模型，模型加载完成前 `/health` 的 `modelReady` 为 `false`，转写接口返回 `MODEL_NOT_READY`。
+服务使用 sherpa-onnx 版 SenseVoiceSmall。请将已校验的 `model.int8.onnx` 和 `tokens.txt` 放到：
+
+```text
+speech-service/.models/verified/sherpa-onnx-sense-voice-zh-en-ja-ko-yue-int8-2024-07-17/
+```
+
+模型不提交到 Git。模型加载完成前 `/health` 的 `modelReady` 为 `false`，转写接口返回 `MODEL_NOT_READY`。
 
 ## 启动
 
