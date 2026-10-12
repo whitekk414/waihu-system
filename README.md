@@ -86,6 +86,7 @@ mvn spring-boot:run
 - [对话 MVP 设计](docs/superpowers/specs/2026-08-04-ari-guided-dialog-mvp-design.md)
 - [外呼工作台设计](docs/superpowers/specs/2026-09-28-outbound-workbench-ui-design.md)
 - [外呼工作台实施计划](docs/superpowers/plans/2026-09-28-outbound-workbench-ui.md)
+- [macOS 微信聊天记录 MCP 部署参考](docs/references/wechat-macos-mcp-notes.md)（外部资料整理，未接入外呼链路）
 
 ## 安全与合规边界
 
